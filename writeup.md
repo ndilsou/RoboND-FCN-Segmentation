@@ -92,13 +92,6 @@ Note that we used MAXPOOL for all the final model downsampling.
 Evaluation Set size:
 
 
-<style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;}
-.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
-.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
-.tg .tg-9hbo{font-weight:bold;vertical-align:top}
-.tg .tg-yw4l{vertical-align:top}
-</style>
 <table class="tg">
   <tr>
     <th class="tg"></th>
@@ -118,13 +111,6 @@ Evaluation Set size:
 Average IoU:
 
 
-<style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;}
-.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
-.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
-.tg .tg-9hbo{font-weight:bold;vertical-align:top}
-.tg .tg-yw4l{vertical-align:top}
-</style>
 <table class="tg">
   <tr>
     <th class="tg">aIoU for \ situation</th>
@@ -156,13 +142,6 @@ Average IoU:
 Confusion Table:
 
 
-<style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;}
-.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
-.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
-.tg .tg-9hbo{font-weight:bold;vertical-align:top}
-.tg .tg-yw4l{vertical-align:top}
-</style>
 <table class="tg">
   <tr>
     <th class="tg">confusion \<br>  situation</th>
