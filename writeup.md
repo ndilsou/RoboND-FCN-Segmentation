@@ -90,6 +90,8 @@ Note that we used MAXPOOL for all the final model downsampling.
 
 ##### Results:
 Evaluation Set size:
+
+
 <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
 .tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
@@ -99,20 +101,23 @@ Evaluation Set size:
 </style>
 <table class="tg">
   <tr>
-    <th class="tg-031e"></th>
-    <th class="tg-9hbo">following</th>
-    <th class="tg-9hbo">not visible</th>
-    <th class="tg-9hbo">far away</th>
+    <th class="tg"></th>
+    <th class="tg">following</th>
+    <th class="tg">not visible</th>
+    <th class="tg">far away</th>
   </tr>
   <tr>
-    <td class="tg-9hbo">number of sample</td>
-    <td class="tg-yw4l">542</td>
-    <td class="tg-yw4l">270</td>
-    <td class="tg-yw4l">322</td>
+    <td class="tg">number of sample</td>
+    <td class="tg">542</td>
+    <td class="tg">270</td>
+    <td class="tg">322</td>
   </tr>
 </table>
+
 
 Average IoU:
+
+
 <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
 .tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
@@ -122,32 +127,35 @@ Average IoU:
 </style>
 <table class="tg">
   <tr>
-    <th class="tg-031e">aIoU for \ situation</th>
-    <th class="tg-9hbo">following</th>
-    <th class="tg-9hbo">not visible</th>
-    <th class="tg-9hbo">far away</th>
+    <th class="tg">aIoU for \ situation</th>
+    <th class="tg">following</th>
+    <th class="tg">not visible</th>
+    <th class="tg">far away</th>
   </tr>
   <tr>
-    <td class="tg-yw4l">background</td>
-    <td class="tg-yw4l">0.996124</td>
-    <td class="tg-yw4l">0.989919</td>
-    <td class="tg-yw4l">0.997138</td>
+    <td class="tg">background</td>
+    <td class="tg">0.996124</td>
+    <td class="tg">0.989919</td>
+    <td class="tg">0.997138</td>
   </tr>
   <tr>
-    <td class="tg-yw4l">people</td>
-    <td class="tg-yw4l">0.423597</td>
-    <td class="tg-yw4l">0.793352</td>
-    <td class="tg-yw4l">0.51175</td>
+    <td class="tg">people</td>
+    <td class="tg">0.423597</td>
+    <td class="tg">0.793352</td>
+    <td class="tg">0.51175</td>
   </tr>
   <tr>
-    <td class="tg-yw4l">hero</td>
-    <td class="tg-yw4l">0.92578</td>
-    <td class="tg-yw4l">0</td>
-    <td class="tg-yw4l">0.310087</td>
+    <td class="tg">hero</td>
+    <td class="tg">0.92578</td>
+    <td class="tg">0</td>
+    <td class="tg">0.310087</td>
   </tr>
 </table>
 
+
 Confusion Table:
+
+
 <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
 .tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
@@ -157,30 +165,31 @@ Confusion Table:
 </style>
 <table class="tg">
   <tr>
-    <th class="tg-031e">confusion \<br>  situation</th>
-    <th class="tg-9hbo">following</th>
-    <th class="tg-9hbo">not visible</th>
-    <th class="tg-9hbo">far away</th>
+    <th class="tg">confusion \<br>  situation</th>
+    <th class="tg">following</th>
+    <th class="tg">not visible</th>
+    <th class="tg">far away</th>
   </tr>
   <tr>
-    <td class="tg-yw4l">true positive</td>
-    <td class="tg-yw4l">539</td>
-    <td class="tg-yw4l">0</td>
-    <td class="tg-yw4l">155</td>
+    <td class="tg">true positive</td>
+    <td class="tg">539</td>
+    <td class="tg">0</td>
+    <td class="tg">155</td>
   </tr>
   <tr>
-    <td class="tg-yw4l">false positive</td>
-    <td class="tg-yw4l">0</td>
-    <td class="tg-yw4l">60</td>
-    <td class="tg-yw4l">2</td>
+    <td class="tg">false positive</td>
+    <td class="tg">0</td>
+    <td class="tg">60</td>
+    <td class="tg">2</td>
   </tr>
   <tr>
-    <td class="tg-yw4l">false negatve</td>
-    <td class="tg-yw4l">0</td>
-    <td class="tg-yw4l">0</td>
-    <td class="tg-yw4l">146</td>
+    <td class="tg">false negatve</td>
+    <td class="tg">0</td>
+    <td class="tg">0</td>
+    <td class="tg">146</td>
   </tr>
 </table>
+
 
 Example predictions:
 
