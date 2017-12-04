@@ -12,6 +12,8 @@ All the files and their content is described below:
 
 - [*code/data_augmentation.ipnb*](./code/data_augmentation.ipynb): Contains code used to perform horizontal flipping on the images and double the dataset size.
 
+- [*data/weights*](./data/weights/): Weights of the trained networks.
+
 - [*code/keras_viz_dependencies.txt*](./code/keras_viz_dependencies.txt): Requirement for keras.utils.vis_utils.plot_model.
 - [*docs/misc/model_architecture.png*](./docs/misc/model_architecture.png): Picture of the network architecture.
 ____
