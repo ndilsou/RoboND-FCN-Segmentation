@@ -2,37 +2,210 @@
 ____
 
 The objective of this project was to train a fully convolutional network to perform semantic segmentation and allow for target tracking on a quadcopter.
-
+Final average IoU obtained after 22 epochs of training is 0.475.
 #### Structure of the project:
 
 All the files and their content is described below:
 
-- [*code/model_training.ipnb*](./code/model_training.ipnb): Notebook containing the network architecture and used for training.
+- [*code/model_training.ipnb*](./code/model_training.ipynb): Notebook containing the network architecture and used for training.
 
-- [*code/Data Augmentation.ipnb*](./code/Data Augmentation.ipnb): Contains code used to perform horizontal flipping on the images and double the dataset size.
+- [*code/data_augmentation.ipnb*](./code/data_augmentation.ipynb): Contains code used to perform horizontal flipping on the images and double the dataset size.
 
-- [*data/weights/*](./data/weights/): This folder contains the weights of the final model.
-
-- [*logs/run1.csv*](./logs/run1.csv): Contains the logs of the final runs.
+- [*code/keras_viz_dependencies.txt*](./code/keras_viz_dependencies.txt): Requirement for keras.utils.vis_utils.plot_model.
+- [*docs/misc/model_architecture.png*](./docs/misc/model_architecture.png): Picture of the network architecture.
 ____
 
-#### Network Architecture :
+#### Experiment Analysis :
 
-lorem ipsum ..
+Let us describe the various steps and information required to replicate our results.
+
+##### Dataset
+We were provided with an initial dataset composed of 4131 labelled training images and 1184 labelled validation images. The expectaction was for us to collect additional data using the QuadCopter simulator provided by Udacity.
+The simulator kept crashing when collecting data for more than a few seconds. Due to that issue, we resorted to augmenting the default dataset to provide the model with more examples.
+We applied the simplest image augmentation technique available by performing a horizontal flipping on the dataset. The code to run this operation is stored in the [*data_augmentation*](./code/data_augmentation.ipnb). 
+This allows to double the size of the dataset and reduced the loss.
+
+##### Loss Function
+
+First investigation of the dataset reveal a severe imbalance. We build a function ```compute_class_weights(train_iter, n=100, skip=2)``` to obtain an estimated class distribution of the training data. The results were: { background: 0.98449375, pedestrian: 0.01390635  hero: 0.00292559 }.
+This meant that the model was able to reach relatively low validation loss and yet perform poorly on our metric of interest, the average IoU.
+To alleviate the imbalance we used the class inverse class distribution to weight the different component of the ```categorical_crossentropy()```. To support this we modified the code of the original ```categorical_crossentropy()``` to accept a weigth on each class:
+```python
+def w_categorical_crossentropy(weights):
+    def loss_func(target, output, from_logits=False):
+      # Note: nn.softmax_cross_entropy_with_logits
+      # expects logits, Keras expects probabilities.
+      if not from_logits:
+        # scale preds so that the class probas of each sample sum to 1
+        output /= tf.reduce_sum(
+            output, axis=len(output.get_shape()) - 1, keep_dims=True)
+        # manual computation of crossentropy
+        epsilon_ = tf.convert_to_tensor(10e-8, output.dtype.base_dtype)
+        output = tf.clip_by_value(output, epsilon_, 1. - epsilon_)
+        return -tf.reduce_sum(
+            weights * target * tf.log(output),
+            axis=len(output.get_shape()) - 1)
+      else:
+        return tf.nn.softmax_cross_entropy_with_logits(labels=target, logits=output)
+    return loss_func
+```
+
+To obtain the weights, a first approach was to use the inverse class distribution: c_i = 1 / P_i; w_i = c_i / sum(c). This method yielded the weights: { 0: 0.00244914,  1: 0.17338599,  2: 0.82416487 }. This flipped the problem. The gradient for background was vanishing, leading to a large amount of false positive for pedestrians and target. 
+Our next experiment was to linearly interpolate the weights from the values above to the unit vector by using the relative epoch. ie w_i(t) = (1 - w_i) * epoch_i/num_epochs + w_i 
+The functionality was interpreted via Keras callbacks.
+The performance of this setup was abysmal. The network was unable to breach below 0.1 categorical cross-entropy. A posteriori, an heuristic explanation for this is the following: By modifying the loss weights mid-learning we are changing the shape of the target distribution that the network is learning.
+This means that the information encoded in the network weights at previous epochs becomes mostly useless to the current epoch.
+
+We finally adopted a less aggressive approach by using the weights {0: 1, 1: 1.05, 2: 1.1}. This slightly inflates the gradient for misclassified humans, but do not dampen learning on the background class.
+
+
+##### Network Architecture
+
+We will define blocks using the following nomenclature: BLOCK(kernelWxkernelH, Stride, depth) when relevant.
+Our network is composed of an assembly of 5 main building blocks:
+
+- encoder blocks : __ENCODER(depth)__=[ SEPARABLE_CONV2D(3x3, 1) -> RELU -> BATCHNORM ]
+
+- decoder blocks : __DECODER(concat, depth)__=[ BILINEAR_UPSAMPLE(2x2) -> CONCATENATE(concat) -> [ SEPARABLE_CONV2D(3x3, 1) -> RELU -> BATCHNORM ] * 2 ]
+
+- downsampling blocks : __DOWNSAMPLE__=[MAXPOOL(2x2, 2)] OR [ENCODER(2x2, 2)]
+
+- dropout blocks : __DROP__=[SPATIAL_DROPOUT2D]
+
+- 1x1 convolutional block : __1x1CONV2D(depth)__=[CONV2D(1x1, 1) -> RELU -> BATCHNORM]
+
+
+The picture of the final architecture is available [*here*](./docs/misc/model_architecture.png). This architecture is inspired from SegNet.
+
+The full architecture of the final model using the previous notation is as follow:
+
+[INPUT] -> [ENCODER(32) -> DOWNSAMPLE -> DROP] -> [ENCODER(64) -> DOWNSAMPLE -> DROP] -> [ENCODER(128) -> DOWNSAMPLE -> DROP] -> [1x1CONV2D(256)] -> [DECODER(encoder128, 128) -> DROP] -> [DECODER(encoder64, 64) -> DROP] -> [DECODER(encoder32, 32) -> DROP] -> [OUTPUT] 
+
+Note that we used MAXPOOL for all the final model downsampling.
+
+
+    Total params: 142,814
+    Trainable params: 140,958
+    Non-trainable params: 1,856
+
+##### Results:
+Evaluation Set size:
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
+.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
+.tg .tg-9hbo{font-weight:bold;vertical-align:top}
+.tg .tg-yw4l{vertical-align:top}
+</style>
+<table class="tg">
+  <tr>
+    <th class="tg-031e"></th>
+    <th class="tg-9hbo">following</th>
+    <th class="tg-9hbo">not visible</th>
+    <th class="tg-9hbo">far away</th>
+  </tr>
+  <tr>
+    <td class="tg-9hbo">number of sample</td>
+    <td class="tg-yw4l">542</td>
+    <td class="tg-yw4l">270</td>
+    <td class="tg-yw4l">322</td>
+  </tr>
+</table>
+
+Average IoU:
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
+.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
+.tg .tg-9hbo{font-weight:bold;vertical-align:top}
+.tg .tg-yw4l{vertical-align:top}
+</style>
+<table class="tg">
+  <tr>
+    <th class="tg-031e">aIoU for \ situation</th>
+    <th class="tg-9hbo">following</th>
+    <th class="tg-9hbo">not visible</th>
+    <th class="tg-9hbo">far away</th>
+  </tr>
+  <tr>
+    <td class="tg-yw4l">background</td>
+    <td class="tg-yw4l">0.996124</td>
+    <td class="tg-yw4l">0.989919</td>
+    <td class="tg-yw4l">0.997138</td>
+  </tr>
+  <tr>
+    <td class="tg-yw4l">people</td>
+    <td class="tg-yw4l">0.423597</td>
+    <td class="tg-yw4l">0.793352</td>
+    <td class="tg-yw4l">0.51175</td>
+  </tr>
+  <tr>
+    <td class="tg-yw4l">hero</td>
+    <td class="tg-yw4l">0.92578</td>
+    <td class="tg-yw4l">0</td>
+    <td class="tg-yw4l">0.310087</td>
+  </tr>
+</table>
+
+Confusion Table:
+<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{font-family:Arial, sans-serif;font-size:14px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
+.tg th{font-family:Arial, sans-serif;font-size:14px;font-weight:normal;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;}
+.tg .tg-9hbo{font-weight:bold;vertical-align:top}
+.tg .tg-yw4l{vertical-align:top}
+</style>
+<table class="tg">
+  <tr>
+    <th class="tg-031e">confusion \<br>  situation</th>
+    <th class="tg-9hbo">following</th>
+    <th class="tg-9hbo">not visible</th>
+    <th class="tg-9hbo">far away</th>
+  </tr>
+  <tr>
+    <td class="tg-yw4l">true positive</td>
+    <td class="tg-yw4l">539</td>
+    <td class="tg-yw4l">0</td>
+    <td class="tg-yw4l">155</td>
+  </tr>
+  <tr>
+    <td class="tg-yw4l">false positive</td>
+    <td class="tg-yw4l">0</td>
+    <td class="tg-yw4l">60</td>
+    <td class="tg-yw4l">2</td>
+  </tr>
+  <tr>
+    <td class="tg-yw4l">false negatve</td>
+    <td class="tg-yw4l">0</td>
+    <td class="tg-yw4l">0</td>
+    <td class="tg-yw4l">146</td>
+  </tr>
+</table>
+
+Example predictions:
+
+
+![](./docs/misc/example_1.png)
+![](./docs/misc/example_2.png)
+![](./docs/misc/example_3.png)
+_left_: input image, _middle_: target mask, _right_: output mask.
+
+
 ____
 
 #### Hyperparameters :
+
 All hyper parameters were obtained via a manual grid search and following various recommendations found online.
 
-- learning_rate = 0.001 : found via manual grid search. other lr used were 0.1, 0.05 and 0.0001
-- batch_size = 16 : initial training was ran on a small local CPU forcing the use of small batches. After moving to the cloud instance, we found out this batch size kept performing well. Other batch size used in the grid search: 8, 32, 256.
-- num_epochs = 30 :
-- steps\_per\_epoch = train_size/batch_size : We follow the recommandation and adapt the number of steps per epoch to the size of the dataset and the batch size. This ensure than each sample is seen only once for a given epoch. 
-- validation_steps = val_size/batch_size : We apply the same reasoning as above.
-- dropout_rate=0.3 : after moving to a deeper network we increased the dropout rate to 0.6. As a consequence the network performance collapsed. Other rates selected were 0.4 and 0.2. they all led to aIoU below 0.4.
-- workers = 2: the EC2 instance has two GPU. we chose this parameter to match the hardware.
+- *learning_rate* = 0.001 : Found via manual grid search. other lr used were 0.1, 0.05 and 0.0001.
+- *batch_size* = 8 : Initial training was ran on a small local GPU forcing the use of small batches. After moving to the cloud instance, we found out this batch size kept performing well. Other batch size used in the grid search: 16, 32, 256. Note that a small batch size corresponds with recommendations made by Yann LeCun in [*Efficient Backprop*](http://yann.lecun.com/exdb/publis/pdf/lecun-98b.pdf), where he strongly yields toward stochastic gradient update. Note that this choice of batch size will cause training as a whole to be slower.
+- *num_epochs* = 30 : We've tried (5, 10, 20, 25, 60) combined with early stopping. Early stopping often stopped learning around between 25-30 naturally. over the whole experiment, 30 appears to offer a reasonable hard cutoff to the training process.  
+- *steps\_per\_epoch* = train_size/batch_size : We follow the recommandation and adapt the number of steps per epoch to the size of the dataset and the batch size. This ensure than each sample is seen only once for a given epoch. 
+- *validation_steps* = val_size/batch_size : We apply the same reasoning as above.
+- *dropout_rate* = 0.1 : after moving to a deeper network we increased the dropout rate to 0.6. As a consequence the network performance collapsed. Other rates selected were 0.4 and 0.2, 0.3. With the exception of 0.3, they all led to aIoU below 0.4.
+- *workers* = 2: the EC2 instance has 1 GPU. but 4 virtual GPU. We chose 2 to allow the batch generator to run in a process on the CPU.
 
-- loss weights: As described above, we modified the categorical\_crossentropy to account for the severe class imbalance in the dataset. A first attempt at obtaining good weights used a inverse pixed count for each class   in a sample of 100 images in the dataset. This led to the weights: { 0.00241022, 0.14757306,  0.85001672}. This set of weight was downscaling the gradient and slowed down learning in addition to flipping the imbalance. With no gradient on misclassified background, the network was returning a large amount of false positive. We then implemented a callback to allow those weights to converge to __1__ after a predefined number of epochs. The effect on learning was catastrophic. A heuristic explanation is that by changing the weights at each epochs we were effectively changing the function to be learned by the network as it was learning. After trial and error we stopped on the weights: {1.0, 1.15, 1.2} to keep the gradient close to the baseline categorical\_crossentropy, with some added weight on the humans detection.
+- *loss weights*: As described above, we modified the categorical\_crossentropy to account for the severe class imbalance in the dataset. A first attempt at obtaining good weights used a inverse pixed count for each class   in a sample of 100 images in the dataset. This led to the weights: { 0.00241022, 0.14757306,  0.85001672}. This set of weight was downscaling the gradient and slowed down learning in addition to flipping the imbalance. With no gradient on misclassified background, the network was returning a large amount of false positive. We then implemented a callback to allow those weights to converge to __1__ after a predefined number of epochs. The effect on learning was catastrophic. A heuristic explanation is that by changing the weights at each epochs we were effectively changing the function to be learned by the network as it was learning. After trial and error we stopped on the weights: {1.0, 1.05, 1.1} to keep the gradient close to the baseline categorical\_crossentropy, with some added weight on the humans detection.
 ____
 
 ##### Concepts :
